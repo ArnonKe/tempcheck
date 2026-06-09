@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกรายงานอุณหภูมิและความชื้นประจำเดือน</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS (XLSX) CDN สำหรับการดาวน์โหลดเป็น Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        /* เทคนิคแบ่งครึ่งตารางแนวทแยงด้วย CSS */
+        .diagonal-split {
+            background: linear-gradient(to top right, transparent 49.5%, #cbd5e1 49.5%, #cbd5e1 50.5%, transparent 50.5%);
+            position: relative;
+        }
+        .diagonal-left {
+            position: absolute;
+            bottom: 4px;
+            left: 8px;
+        }
+        .diagonal-right {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+        }
+        /* Custom scrollbar for table container */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 10px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- ส่วนหัวข้อและควบคุม -->
+        <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i data-lucide="thermometer-snowflake" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">รายงานการตรวจสอบ อุณหภูมิและความชื้น</h1>
+                        <p class="text-sm text-slate-500 mt-0.5">ประจำเดือน มิถุนายน พ.ศ. 2569</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                <!-- ปุ่มส่งออกเป็น Excel -->
+                <button onclick="exportToExcel()" class="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-semibold transition-all border border-emerald-700 text-sm flex-1 lg:flex-initial shadow-sm shadow-emerald-100">
+                    <i data-lucide="file-spreadsheet" class="w-4.5 h-4.5"></i> Export เป็น Excel (.xlsx)
+                </button>
+                <!-- ปุ่มส่งออกเป็น JSON เดิม -->
+                <button onclick="exportData()" class="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-semibold transition-all border border-slate-200 text-sm flex-1 lg:flex-initial">
+                    <i data-lucide="download" class="w-4 h-4"></i> Backup JSON
+                </button>
+                <!-- ปุ่มล้างข้อมูล -->
+                <button onclick="resetDataWithConfirm()" class="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl font-semibold transition-all border border-rose-200 text-sm flex-1 lg:flex-initial">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> ล้างข้อมูล
+                </button>
+            </div>
+        </header>
+
+        <!-- แถบสถิติย่อประจำเดือน -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg">
+                    <i data-lucide="thermometer" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">อุณหภูมิเฉลี่ย</div>
+                    <div id="stat-avg-temp" class="text-xl font-bold text-slate-800">- °C</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                    <i data-lucide="droplet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">ความชื้นเฉลี่ย</div>
+                    <div id="stat-avg-hum" class="text-xl font-bold text-slate-800">- %RH</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i data-lucide="check-square" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">จำนวนที่ตรวจสอบผ่าน</div>
+                    <div id="stat-checked-count" class="text-xl font-bold text-slate-800">0 รอบ</div>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400">อัตราการผ่านเกณฑ์</div>
+                    <div id="stat-pass-rate" class="text-xl font-bold text-slate-800">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- กล่องตารางข้อมูลหลัก -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <!-- คำแนะนำการใช้งาน -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div class="flex items-center gap-2 text-sm text-slate-600">
+                    <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+                    <span><strong>คำแนะนำ:</strong> คลิกที่ช่องว่างของแต่ละวันเพื่อบันทึก อุณหภูมิ / ความชื้น และสถานะได้ทันที</span>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-slate-500">
+                    <div class="flex items-center gap-1">
+                        <span class="w-3.5 h-3.5 inline-block bg-emerald-100 border border-emerald-300 rounded"></span> ผ่านเกณฑ์
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="w-3.5 h-3.5 inline-block bg-rose-100 border border-rose-300 rounded"></span> ไม่ผ่านเกณฑ์
+                    </div>
+                </div>
+            </div>
+
+            <!-- คอนเทนเนอร์ตารางรองรับการเลื่อนแนวนอน -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse table-fixed min-w-[1500px]">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <!-- คอลัมน์ที่ 1: สถานที่ -->
+                            <th class="w-48 p-3 text-sm font-semibold text-slate-700 text-center border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
+                                Location (สถานที่)
+                            </th>
+                            <!-- คอลัมน์ที่ 2: ช่วงเวลา -->
+                            <th class="w-24 p-3 text-sm font-semibold text-slate-700 text-center border-r border-slate-200 sticky left-[192px] bg-slate-50 z-10 diagonal-split h-16">
+                                <span class="diagonal-left font-medium text-xs text-slate-500">รอบตรวจ</span>
+                                <span class="diagonal-right font-medium text-xs text-slate-500">วันที่</span>
+                            </th>
+                            <!-- คอลัมน์วันที่ 1 - 30 -->
+                            <!-- วนลูปสร้างคอลัมน์ 30 วัน -->
+                            <script>
+                                for (let day = 1; day <= 30; day++) {
+                                    document.write(`
+                                        <th class="w-[68px] p-2 text-xs font-bold text-center text-slate-600 border-r border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                            <div class="text-slate-400 text-[10px] uppercase">มิ.ย.</div>
+                                            <div class="text-base text-slate-800">${day}</div>
+                                        </th>
+                                    `);
+                                }
+                            </script>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- แถวข้อมูลจะถูกสร้างแบบ Dynamic ด้วย JavaScript ตรงนี้ -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center text-xs text-slate-400 pb-12">
+            ออกแบบจำลองระบบรายงานตารางตรวจสอบอุณหภูมิและความชื้นแบบ Single-Cell Input | รองรับการดาวน์โหลดไฟล์ Excel .xlsx และระบบบันทึกข้อมูลออฟไลน์
+        </footer>
+    </div>
+
+    <!-- หน้าต่างบันทึกข้อมูลแบบลอยตัว (Modal/Dialog Popup) -->
+    <div id="record-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-[scaleUp_0.2s_ease-out]">
+            <!-- หัวข้อ Modal -->
+            <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
+                        <span>บันทึกผลการตรวจสอบ</span>
+                    </h3>
+                    <p id="modal-subtitle" class="text-xs text-slate-400 mt-1">สถานที่: - | วันที่: -</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- ฟอร์มกรอกข้อมูล -->
+            <div class="p-6 space-y-5">
+                <!-- ส่วนเลือกสถานะผ่าน/ไม่ผ่าน -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">สถานะการตรวจสอบ</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label id="btn-status-pass" class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
+                            <input type="radio" name="check_status" id="status-pass" value="pass" class="sr-only">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500"></i>
+                            <span class="text-sm font-semibold text-slate-700">ผ่านเกณฑ์</span>
+                        </label>
+                        <label id="btn-status-fail" class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
+                            <input type="radio" name="check_status" id="status-fail" value="fail" class="sr-only">
+                            <i data-lucide="x-circle" class="w-5 h-5 text-rose-500"></i>
+                            <span class="text-sm font-semibold text-slate-700">ไม่ผ่านเกณฑ์</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ป้อนข้อมูลตัวเลข -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="input-temp" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                            <i data-lucide="thermometer" class="w-4 h-4 text-amber-500"></i>
+                            อุณหภูมิ (°C)
+                        </label>
+                        <input type="number" id="input-temp" step="0.1" placeholder="เช่น 25.4" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
+                    </div>
+                    <div>
+                        <label for="input-hum" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                            <i data-lucide="droplet" class="w-4 h-4 text-blue-500"></i>
+                            ความชื้น (%RH)
+                        </label>
+                        <input type="number" id="input-hum" step="0.1" placeholder="เช่น 60" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    *ข้อมูลอุณหภูมิและความชื้นจะช่วยนำไปคำนวณสถิติภาพรวมประจำเดือน
+                </div>
+            </div>
+
+            <!-- ส่วนล่างควบคุมปุ่มบันทึก -->
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                <button onclick="clearCellRecord()" class="px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200">
+                    ล้างช่องนี้
+                </button>
+                <div class="flex-1 flex gap-3 justify-end">
+                    <button onclick="closeModal()" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button onclick="saveCellRecord()" class="px-6 py-2.5 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- โกลบอลสไตล์สำหรับการแอนิเมชันตอนเปิด Modal -->
+    <style>
+        @keyframes scaleUp {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <!-- สคริปต์การทำงานของตารางและระบบบันทึก -->
+    <script>
+        // ข้อมูลสถานที่และรอบตรวจ (ตามแบบฟอร์มในภาพ)
+        const locations = [
+            { id: "suen", name: "สำนักงาน SUEN" },
+            { id: "wemake", name: "หน้าร้าน We make" },
+            { id: "scprecast", name: "สำนักงาน SC Precast" }
+        ];
+        const shifts = [
+            { id: "morning", name: "ช่วงเช้า" },
+            { id: "afternoon", name: "ช่วงบ่าย" }
+        ];
+
+        // โครงสร้างสำหรับเก็บข้อมูลบันทึกทั้งหมด
+        // คีย์ของแอปจะเป็นรูปแบบ: locationId_shiftId_day (เช่น suen_morning_1)
+        let records = {};
+
+        // สถานะการเปิดเซลล์ปัจจุบัน
+        let activeCellKey = null;
+
+        // ฟังก์ชันโหลดข้อมูลเริ่มต้นจาก LocalStorage (ถ้ามี)
+        function loadSavedData() {
+            const saved = localStorage.getItem("temp_humidity_records");
+            if (saved) {
+                try {
+                    records = JSON.parse(saved);
+                } catch (e) {
+                    records = {};
+                }
+            }
+        }
+
+        // บันทึกความเปลี่ยนแปลงลง LocalStorage
+        function saveDataToLocal() {
+            localStorage.setItem("temp_humidity_records", JSON.stringify(records));
+            updateStatistics();
+        }
+
+        // คืนค่าเริ่มต้นให้แอปพลิเคชัน
+        function resetDataWithConfirm() {
+            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลรายงานอุณหภูมิและความชื้นทั้งหมดของเดือนนี้? (ข้อมูลเดิมจะไม่สามารถกู้คืนได้)")) {
+                records = {};
+                saveDataToLocal();
+                renderTable();
+                showToast("ล้างข้อมูลรายงานเรียบร้อยแล้ว", "success");
+            }
+        }
+
+        // ฟังก์ชันสร้าง/แสดงผลตารางรายงาน
+        function renderTable() {
+            const tbody = document.getElementById("table-body");
+            tbody.innerHTML = "";
+
+            // วนรอบเพื่อสร้างบรรทัด (Locations)
+            locations.forEach((loc) => {
+                shifts.forEach((shift, shiftIndex) => {
+                    const row = document.createElement("tr");
+                    row.className = "border-b border-slate-200 hover:bg-slate-50/50 transition-colors";
+
+                    // สังเกตลักษณะการยุบเซลล์ (Rowspan) สำหรับ Location
+                    let locCellHtml = "";
+                    if (shiftIndex === 0) {
+                        locCellHtml = `
+                            <td class="p-3 font-semibold text-slate-800 border-r border-slate-200 text-center text-sm sticky left-0 bg-white z-10" rowspan="2">
+                                ${loc.name}
+                            </td>
+                        `;
+                    }
+
+                    // รอบเช้า/บ่าย
+                    const shiftCellHtml = `
+                        <td class="p-3 text-slate-600 border-r border-slate-200 text-center text-xs font-medium bg-slate-50 sticky left-[192px] z-10">
+                            ${shift.name}
+                        </td>
+                    `;
+
+                    row.innerHTML = locCellHtml + shiftCellHtml;
+
+                    // วนลูปเพื่อสร้างช่องข้อมูลของแต่ละวัน (1 - 30)
+                    for (let day = 1; day <= 30; day++) {
+                        const cellKey = `${loc.id}_${shift.id}_${day}`;
+                        const cellData = records[cellKey];
+                        
+                        let cellContent = "";
+                        let bgClass = "bg-white hover:bg-slate-100";
+
+                        if (cellData) {
+                            const isPass = cellData.status === "pass";
+                            bgClass = isPass ? "bg-emerald-50/60 hover:bg-emerald-100/80" : "bg-rose-50/60 hover:bg-rose-100/80";
+                            
+                            // ออกแบบการแสดงผลข้อมูลแบบกะทัดรัด (Compact Single Cell Output)
+                            const iconHtml = isPass 
+                                ? `<span class="inline-flex items-center justify-center bg-emerald-500 text-white rounded-md p-0.5 text-[10px] w-4 h-4 font-bold">✓</span>`
+                                : `<span class="inline-flex items-center justify-center bg-rose-500 text-white rounded-md p-0.5 text-[10px] w-4 h-4 font-bold">✗</span>`;
+                            
+                            const tempText = cellData.temp ? `${cellData.temp}°` : "-";
+                            const humText = cellData.hum ? `${cellData.hum}%` : "-";
+
+                            cellContent = `
+                                <div class="flex flex-col items-center justify-center gap-1 py-1 px-0.5 select-none">
+                                    <div class="flex items-center justify-center">
+                                        ${iconHtml}
+                                    </div>
+                                    <div class="text-[10px] font-bold text-slate-700 leading-none">
+                                        ${tempText} / ${humText}
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            // เซลล์ว่าง (พร้อมติ๊กถูกเป็น Checkbox เปล่าเหมือนในชีท)
+                            cellContent = `
+                                <div class="flex items-center justify-center py-2">
+                                    <div class="w-4 h-4 rounded border border-slate-300 bg-white flex items-center justify-center group-hover:border-blue-400 transition-colors"></div>
+                                </div>
+                            `;
+                        }
+
+                        // เพิ่ม Cell เข้าไปในแถว
+                        const cellTd = document.createElement("td");
+                        cellTd.className = `p-1 border-r border-slate-200 text-center cursor-pointer transition-all ${bgClass}`;
+                        cellTd.onclick = () => openRecordModal(loc.id, loc.name, shift.id, shift.name, day);
+                        cellTd.innerHTML = cellContent;
+                        row.appendChild(cellTd);
+                    }
+
+                    tbody.appendChild(row);
+                });
+            });
+
+            // อัปเดต Lucide Icons หลังจากเรนเดอร์ตารางเสร็จ
+            lucide.createIcons();
+        }
+
+        // ฟังก์ชันเปิด Modal เพื่อกรอกข้อมูลรายเซลล์
+        function openRecordModal(locId, locName, shiftId, shiftName, day) {
+            activeCellKey = `${locId}_${shiftId}_day`; // แก้ไขเพื่อให้เข้ากับ key ในการบันทึก
+            activeCellKey = `${locId}_${shiftId}_${day}`;
+            const subtitleText = `สถานที่: ${locName} (${shiftName}) | วันที่: ${day} มิถุนายน 2569`;
+            document.getElementById("modal-subtitle").innerText = subtitleText;
+
+            // ตรวจสอบและดึงข้อมูลเดิมมาแสดงผล (ถ้ามี)
+            const currentData = records[activeCellKey];
+            
+            // รีเซ็ตการตกแต่งสถานะใน Modal
+            document.getElementById("status-pass").checked = false;
+            document.getElementById("status-fail").checked = false;
+            document.getElementById("input-temp").value = "";
+            document.getElementById("input-hum").value = "";
+
+            if (currentData) {
+                if (currentData.status === "pass") {
+                    document.getElementById("status-pass").checked = true;
+                } else if (currentData.status === "fail") {
+                    document.getElementById("status-fail").checked = true;
+                }
+                document.getElementById("input-temp").value = currentData.temp || "";
+                document.getElementById("input-hum").value = currentData.hum || "";
+            } else {
+                // ค่าเริ่มต้นเมื่อกดเข้าไปในช่องว่างให้เลือก "ผ่านเกณฑ์" ไว้ก่อน
+                document.getElementById("status-pass").checked = true;
+            }
+
+            // ทำการอัปเดต UI ของปุ่มสถานะวิทยุ (Custom Radio Button style)
+            updateStatusUi();
+
+            // แสดงผลโมดอลลอยตัว
+            const modal = document.getElementById("record-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        // ควบคุมสไตล์สถานะเมื่อเปลี่ยนปุ่มเรดิโอ
+        function updateStatusUi() {
+            const passBtn = document.getElementById("btn-status-pass");
+            const failBtn = document.getElementById("btn-status-fail");
+            const isPassChecked = document.getElementById("status-pass").checked;
+            const isFailChecked = document.getElementById("status-fail").checked;
+
+            if (isPassChecked) {
+                passBtn.className = "flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/50 cursor-pointer transition-all";
+                failBtn.className = "flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer transition-all hover:bg-slate-50";
+            } else if (isFailChecked) {
+                passBtn.className = "flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-slate-200 cursor-pointer transition-all hover:bg-slate-50";
+                failBtn.className = "flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-rose-500 bg-rose-50/50 cursor-pointer transition-all";
+            }
+        }
+
+        // ฟังก์ชันผูกเหตุการณ์คลิกให้เลือกเปลี่ยนสีปุ่มวิทยุสวยๆ
+        document.getElementById("status-pass").addEventListener("change", updateStatusUi);
+        document.getElementById("status-fail").addEventListener("change", updateStatusUi);
+
+        // ปิดหน้าต่างโมดอล
+        function closeModal() {
+            const modal = document.getElementById("record-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            activeCellKey = null;
+        }
+
+        // บันทึกข้อมูลที่กรอกลงในเซลล์
+        function saveCellRecord() {
+            if (!activeCellKey) return;
+
+            const isPass = document.getElementById("status-pass").checked;
+            const tempVal = document.getElementById("input-temp").value;
+            const humVal = document.getElementById("input-hum").value;
+
+            // ตรวจสอบความถูกต้องของข้อมูล (สามารถบันทึกแค่ติ๊กผ่าน/ไม่ผ่านอย่างเดียวได้)
+            records[activeCellKey] = {
+                status: isPass ? "pass" : "fail",
+                temp: tempVal !== "" ? parseFloat(tempVal) : null,
+                hum: humVal !== "" ? parseFloat(humVal) : null
+            };
+
+            // อัปเดตตารางและเก็บสถิติลงฐานข้อมูลเครื่อง
+            saveDataToLocal();
+            renderTable();
+            closeModal();
+            showToast("บันทึกข้อมูลเรียบร้อยแล้ว", "success");
+        }
+
+        // เคลียร์ค่าข้อมูลในเซลล์นั้นกลับเป็นว่างเปล่า
+        function clearCellRecord() {
+            if (!activeCellKey) return;
+
+            if (records[activeCellKey]) {
+                delete records[activeCellKey];
+                saveDataToLocal();
+                renderTable();
+                closeModal();
+                showToast("ล้างข้อมูลช่องดังกล่าวสำเร็จ", "info");
+            } else {
+                closeModal();
+            }
+        }
+
+        // ฟังก์ชันคำนวณสถิติภาพรวมประจำเดือน
+        function updateStatistics() {
+            let totalTemp = 0;
+            let tempCount = 0;
+            let totalHum = 0;
+            let humCount = 0;
+            let totalPass = 0;
+            const keys = Object.keys(records);
+            const totalRecords = keys.length;
+
+            keys.forEach(key => {
+                const item = records[key];
+                if (item.temp !== null && item.temp !== undefined) {
+                    totalTemp += item.temp;
+                    tempCount++;
+                }
+                if (item.hum !== null && item.hum !== undefined) {
+                    totalHum += item.hum;
+                    humCount++;
+                }
+                if (item.status === "pass") {
+                    totalPass++;
+                }
+            });
+
+            // แสดงผลอุณหภูมิเฉลี่ย
+            if (tempCount > 0) {
+                document.getElementById("stat-avg-temp").innerText = `${(totalTemp / tempCount).toFixed(1)} °C`;
+            } else {
+                document.getElementById("stat-avg-temp").innerText = "- °C";
+            }
+
+            // แสดงผลความชื้นเฉลี่ย
+            if (humCount > 0) {
+                document.getElementById("stat-avg-hum").innerText = `${(totalHum / humCount).toFixed(1)} %RH`;
+            } else {
+                document.getElementById("stat-avg-hum").innerText = "- %RH";
+            }
+
+            // จำนวนที่ผ่านเกณฑ์
+            document.getElementById("stat-checked-count").innerText = `${totalPass} / ${totalRecords} รอบ`;
+
+            // อัตราการผ่านเกณฑ์สูงสุด
+            if (totalRecords > 0) {
+                const passRate = ((totalPass / totalRecords) * 100).toFixed(0);
+                document.getElementById("stat-pass-rate").innerText = `${passRate}%`;
+            } else {
+                document.getElementById("stat-pass-rate").innerText = "0%";
+            }
+        }
+
+        // ฟังก์ชันสำหรับส่งออกรายงานเป็นไฟล์ Excel (.xlsx) อย่างเป็นระบบ
+        function exportToExcel() {
+            try {
+                // สร้าง Workbook เปล่าขึ้นมา
+                const wb = XLSX.utils.book_new();
+
+                // สร้างโครงสร้างตารางข้อมูลเป็นแถว (Array of Arrays)
+                const data = [];
+
+                // แถวที่ 1: หัวตาราง
+                const headerRow = ["สถานที่ (Location)", "รอบตรวจสอบ"];
+                for (let day = 1; day <= 30; day++) {
+                    headerRow.push(`วันที่ ${day}`);
+                }
+                data.push(headerRow);
+
+                // แถวข้อมูล: นำข้อมูลจากตัวแปร records มาแปลงเป็นฟอร์แมตข้อความสวยงามสำหรับ Excel
+                locations.forEach(loc => {
+                    shifts.forEach(shift => {
+                        const row = [loc.name, shift.name];
+                        for (let day = 1; day <= 30; day++) {
+                            const cellKey = `${loc.id}_${shift.id}_${day}`;
+                            const cellData = records[cellKey];
+                            if (cellData) {
+                                const statusSymbol = cellData.status === "pass" ? "✓" : "✗";
+                                const tempText = cellData.temp !== null ? `${cellData.temp}°C` : "-";
+                                const humText = cellData.hum !== null ? `${cellData.hum}%` : "-";
+                                row.push(`${statusSymbol} (${tempText} / ${humText})`);
+                            } else {
+                                row.push(""); // เซลล์ว่างที่ยังไม่ได้บันทึกผล
+                            }
+                        }
+                        data.push(row);
+                    });
+                });
+
+                // แปลงแถวข้อมูลเป็น Worksheet ของ Excel
+                const ws = XLSX.utils.aoa_to_sheet(data);
+
+                // จัดลำดับความกว้างคอลัมน์ (Column Widths)
+                const colWidths = [
+                    { wch: 25 }, // คอลัมน์สถานที่
+                    { wch: 15 }  // คอลัมน์รอบตรวจ
+                ];
+                for (let i = 1; i <= 30; i++) {
+                    colWidths.push({ wch: 18 }); // คอลัมน์วันที่ 1-30 ให้มีความกว้างที่พอดีสำหรับ "✓ (25.4°C / 60%)"
+                }
+                ws['!cols'] = colWidths;
+
+                // การผสานเซลล์ (Merge Cells) ในคอลัมน์ "สถานที่" เพื่อให้ดูเหมือนในต้นฉบับ
+                // ดัชนีเริ่มต้นด้วย 0: แถวหัวตารางคือแถวที่ 0
+                // แถวที่ 1 กับ 2 (สำนักงาน SUEN), แถวที่ 3 กับ 4 (หน้าร้าน We make), แถวที่ 5 กับ 6 (สำนักงาน SC Precast)
+                ws['!merges'] = [
+                    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, // ผสานช่องสถานที่ SUEN
+                    { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } }, // ผสานช่องสถานที่ We make
+                    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }  // ผสานช่องสถานที่ SC Precast
+                ];
+
+                // บันทึก Sheet เข้าสู่ Workbook
+                XLSX.utils.book_append_sheet(wb, ws, "รายงานอุณหภูมิและความชื้น");
+
+                // สั่งดาวน์โหลดเป็นไฟล์ .xlsx
+                XLSX.writeFile(wb, "รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.xlsx");
+                showToast("ดาวน์โหลดไฟล์ Excel สำเร็จเรียบร้อยแล้ว!", "success");
+
+            } catch (error) {
+                console.error("Error exporting excel: ", error);
+                showToast("เกิดข้อผิดพลาดในการส่งออก Excel", "fail");
+            }
+        }
+
+        // ฟังก์ชันส่งออกไฟล์ JSON เพื่อสำรองข้อมูลเดิม
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+            const downloadAnchor = document.createElement("a");
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("ส่งออกข้อมูล JSON สำเร็จ", "success");
+        }
+
+        // แสดงแจ้งเตือนด่วน (Toast Message) โดยไม่พึ่งพาระบบ Alert
+        function showToast(message, type = "info") {
+            const toast = document.createElement("div");
+            toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-lg border text-sm font-semibold transition-all transform translate-y-10 opacity-0 z-50 flex items-center gap-2 max-w-sm`;
+            
+            let icon = `<i data-lucide="info" class="w-5 h-5 text-blue-500"></i>`;
+            if (type === "success") {
+                toast.classList.add("bg-emerald-50", "border-emerald-200", "text-emerald-800");
+                icon = `<i data-lucide="check-circle" class="w-5 h-5 text-emerald-500"></i>`;
+            } else if (type === "info") {
+                toast.classList.add("bg-blue-50", "border-blue-200", "text-blue-800");
+                icon = `<i data-lucide="info" class="w-5 h-5 text-blue-500"></i>`;
+            } else {
+                toast.classList.add("bg-rose-50", "border-rose-200", "text-rose-800");
+                icon = `<i data-lucide="x-circle" class="w-5 h-5 text-rose-500"></i>`;
+            }
+
+            toast.innerHTML = `${icon} <span>${message}</span>`;
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            // ดึงขยับแอนิเมชันขึ้นมาแสดง
+            setTimeout(() => {
+                toast.classList.remove("translate-y-10", "opacity-0");
+            }, 10);
+
+            // เก็บข้อความทิ้งไปใน 3 วินาที
+            setTimeout(() => {
+                toast.classList.add("translate-y-10", "opacity-0");
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // การเริ่มต้นแอปพลิเคชัน
+        window.onload = function() {
+            loadSavedData();
+            renderTable();
+            updateStatistics();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
