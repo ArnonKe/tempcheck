@@ -57,9 +57,29 @@
                     <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
                         <i data-lucide="thermometer-snowflake" class="w-8 h-8"></i>
                     </div>
-                    <div>
+                    <div class="flex flex-col">
                         <h1 class="text-2xl font-bold text-slate-900">รายงานการตรวจสอบ อุณหภูมิและความชื้น</h1>
-                        <p class="text-sm text-slate-500 mt-0.5">ประจำเดือน มิถุนายน พ.ศ. 2569</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <select id="select-month" onchange="changePeriod()" class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                                <option value="0">มกราคม</option>
+                                <option value="1">กุมภาพันธ์</option>
+                                <option value="2">มีนาคม</option>
+                                <option value="3">เมษายน</option>
+                                <option value="4">พฤษภาคม</option>
+                                <option value="5" selected>มิถุนายน</option>
+                                <option value="6">กรกฎาคม</option>
+                                <option value="7">สิงหาคม</option>
+                                <option value="8">กันยายน</option>
+                                <option value="9">ตุลาคม</option>
+                                <option value="10">พฤศจิกายน</option>
+                                <option value="11">ธันวาคม</option>
+                            </select>
+                            <select id="select-year" onchange="changePeriod()" class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                                <option value="2568">พ.ศ. 2568</option>
+                                <option value="2569" selected>พ.ศ. 2569</option>
+                                <option value="2570">พ.ศ. 2570</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -152,13 +172,14 @@
                                 <span class="diagonal-left font-medium text-xs text-slate-500">รอบตรวจ</span>
                                 <span class="diagonal-right font-medium text-xs text-slate-500">วันที่</span>
                             </th>
-                            <!-- คอลัมน์วันที่ 1 - 30 -->
-                            <!-- วนลูปสร้างคอลัมน์ 30 วัน -->
+                            <!-- คอลัมน์วันที่ 1 - 31 -->
                             <script>
-                                for (let day = 1; day <= 30; day++) {
+                                const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
+                                const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
+                                for (let day = 1; day <= daysInMonth; day++) {
                                     document.write(`
                                         <th class="w-[68px] p-2 text-xs font-bold text-center text-slate-600 border-r border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
-                                            <div class="text-slate-400 text-[10px] uppercase">มิ.ย.</div>
+                                            <div class="text-slate-400 text-[10px] uppercase">${monthName.substring(0,2)}</div>
                                             <div class="text-base text-slate-800">${day}</div>
                                         </th>
                                     `);
@@ -276,11 +297,24 @@
         ];
 
         // โครงสร้างสำหรับเก็บข้อมูลบันทึกทั้งหมด
-        // คีย์ของแอปจะเป็นรูปแบบ: locationId_shiftId_day (เช่น suen_morning_1)
+        // คีย์ของแอปจะเป็นรูปแบบ: year_month_locationId_shiftId_day (เช่น 2569_5_suen_morning_1)
         let records = {};
+
+        // สถานะปัจจุบัน
+        let currentPeriod = {
+            month: 5,
+            year: "2569"
+        };
 
         // สถานะการเปิดเซลล์ปัจจุบัน
         let activeCellKey = null;
+
+        function changePeriod() {
+            currentPeriod.month = parseInt(document.getElementById("select-month").value);
+            currentPeriod.year = document.getElementById("select-year").value;
+            renderTable();
+            updateStatistics();
+        }
 
         // ฟังก์ชันโหลดข้อมูลเริ่มต้นจาก LocalStorage (ถ้ามี)
         function loadSavedData() {
@@ -315,6 +349,9 @@
             const tbody = document.getElementById("table-body");
             tbody.innerHTML = "";
 
+            // คำนวณจำนวนวันในเดือนที่เลือก
+            const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
+
             // วนรอบเพื่อสร้างบรรทัด (Locations)
             locations.forEach((loc) => {
                 shifts.forEach((shift, shiftIndex) => {
@@ -340,9 +377,9 @@
 
                     row.innerHTML = locCellHtml + shiftCellHtml;
 
-                    // วนลูปเพื่อสร้างช่องข้อมูลของแต่ละวัน (1 - 30)
-                    for (let day = 1; day <= 30; day++) {
-                        const cellKey = `${loc.id}_${shift.id}_${day}`;
+                    // วนลูปเพื่อสร้างช่องข้อมูลของแต่ละวัน (1 - daysInMonth)
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const cellKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_${shift.id}_${day}`;
                         const cellData = records[cellKey];
                         
                         let cellContent = "";
@@ -397,9 +434,9 @@
 
         // ฟังก์ชันเปิด Modal เพื่อกรอกข้อมูลรายเซลล์
         function openRecordModal(locId, locName, shiftId, shiftName, day) {
-            activeCellKey = `${locId}_${shiftId}_day`; // แก้ไขเพื่อให้เข้ากับ key ในการบันทึก
-            activeCellKey = `${locId}_${shiftId}_${day}`;
-            const subtitleText = `สถานที่: ${locName} (${shiftName}) | วันที่: ${day} มิถุนายน 2569`;
+            activeCellKey = `${currentPeriod.year}_${currentPeriod.month}_${locId}_${shiftId}_${day}`;
+            const monthName = document.getElementById("select-month").options[currentPeriod.month].text;
+            const subtitleText = `สถานที่: ${locName} (${shiftName}) | วันที่: ${day} ${monthName} พ.ศ. ${currentPeriod.year}`;
             document.getElementById("modal-subtitle").innerText = subtitleText;
 
             // ตรวจสอบและดึงข้อมูลเดิมมาแสดงผล (ถ้ามี)
@@ -608,10 +645,7 @@
                 ];
 
                 // บันทึก Sheet เข้าสู่ Workbook
-                XLSX.utils.book_append_sheet(wb, ws, "รายงานอุณหภูมิและความชื้น");
-
-                // สั่งดาวน์โหลดเป็นไฟล์ .xlsx
-                XLSX.writeFile(wb, "รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.xlsx");
+                XLSX.utils.book_append_sheet(wb, ws, "รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.xlsx");
                 showToast("ดาวน์โหลดไฟล์ Excel สำเร็จเรียบร้อยแล้ว!", "success");
 
             } catch (error) {
