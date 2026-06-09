@@ -177,21 +177,23 @@
                                 // ใช้ฟังก์ชัน renderHeaderDays เพื่อให้สามารถอัปเดตได้เมื่อเปลี่ยนเดือน/ปี
                                 function renderHeaderDays() {
                                     const headerRow = document.querySelector('thead tr');
-                                    // ลบคอลัมน์วันที่เดิมออกก่อน (เก็บไว้แค่ 2 คอลัมน์แรก)
                                     while (headerRow.children.length > 2) {
                                         headerRow.removeChild(headerRow.lastChild);
                                     }
 
                                     const monthSelect = document.getElementById('select-month');
                                     const yearSelect = document.getElementById('select-year');
-                                    const monthName = monthSelect.options[monthSelect.value].text;
-                                    const daysInMonth = new Date(2000 + parseInt(yearSelect.value) - 543, parseInt(monthSelect.value) + 1, 0).getDate();
+                                    const monthIndex = parseInt(monthSelect.value);
+                                    
+                                    const monthShortNames = ["มก.", "กพ.", "มีค.", "เม.ย.", "พค.", "มิย.", "กค.", "สค.", "กย.", "ตค.", "พย.", "ธค."];
+                                    const monthName = monthShortNames[monthIndex];
+                                    const daysInMonth = new Date(2000 + parseInt(yearSelect.value) - 543, monthIndex + 1, 0).getDate();
 
                                     for (let day = 1; day <= daysInMonth; day++) {
                                         const th = document.createElement('th');
                                         th.className = "w-[68px] p-2 text-xs font-bold text-center text-slate-600 border-r border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors";
                                         th.innerHTML = `
-                                            <div class="text-slate-400 text-[10px] uppercase">${monthName.substring(0,2)}</div>
+                                            <div class="text-slate-400 text-[10px] uppercase">${monthName}</div>
                                             <div class="text-base text-slate-800">${day}</div>
                                         `;
                                         headerRow.appendChild(th);
@@ -665,7 +667,7 @@
                 ];
 
                 // บันทึก Sheet เข้าสู่ Workbook
-                XLSX.utils.book_append_sheet(wb, ws, "รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.xlsx");
+                XLSX.utils.book_append_sheet(wb, ws, `รายงานอุณหภูมิ_ความชื้น_${document.getElementById('select-month').options[document.getElementById('select-month').value].text}_${document.getElementById('select-year').value}.xlsx`);
                 showToast("ดาวน์โหลดไฟล์ Excel สำเร็จเรียบร้อยแล้ว!", "success");
 
             } catch (error) {
@@ -679,7 +681,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
             const downloadAnchor = document.createElement("a");
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_มิถุนายน_2569.json`);
+            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_${document.getElementById('select-month').options[document.getElementById('select-month').value].text}_${document.getElementById('select-year').value}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
