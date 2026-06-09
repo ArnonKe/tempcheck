@@ -174,16 +174,30 @@
                             </th>
                             <!-- คอลัมน์วันที่ 1 - 31 -->
                             <script>
-                                const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
-                                const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
-                                for (let day = 1; day <= daysInMonth; day++) {
-                                    document.write(`
-                                        <th class="w-[68px] p-2 text-xs font-bold text-center text-slate-600 border-r border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                // ใช้ฟังก์ชัน renderHeaderDays เพื่อให้สามารถอัปเดตได้เมื่อเปลี่ยนเดือน/ปี
+                                function renderHeaderDays() {
+                                    const headerRow = document.querySelector('thead tr');
+                                    // ลบคอลัมน์วันที่เดิมออกก่อน (เก็บไว้แค่ 2 คอลัมน์แรก)
+                                    while (headerRow.children.length > 2) {
+                                        headerRow.removeChild(headerRow.lastChild);
+                                    }
+
+                                    const monthSelect = document.getElementById('select-month');
+                                    const yearSelect = document.getElementById('select-year');
+                                    const monthName = monthSelect.options[monthSelect.value].text;
+                                    const daysInMonth = new Date(2000 + parseInt(yearSelect.value) - 543, parseInt(monthSelect.value) + 1, 0).getDate();
+
+                                    for (let day = 1; day <= daysInMonth; day++) {
+                                        const th = document.createElement('th');
+                                        th.className = "w-[68px] p-2 text-xs font-bold text-center text-slate-600 border-r border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors";
+                                        th.innerHTML = `
                                             <div class="text-slate-400 text-[10px] uppercase">${monthName.substring(0,2)}</div>
                                             <div class="text-base text-slate-800">${day}</div>
-                                        </th>
-                                    `);
+                                        `;
+                                        headerRow.appendChild(th);
+                                    }
                                 }
+                                renderHeaderDays();
                             </script>
                         </tr>
                     </thead>
@@ -312,6 +326,12 @@
         function changePeriod() {
             currentPeriod.month = parseInt(document.getElementById("select-month").value);
             currentPeriod.year = document.getElementById("select-year").value;
+            
+            // อัปเดตหัวตารางวันที่ให้ตรงกับเดือนที่เลือก
+            if (typeof renderHeaderDays === 'function') {
+                renderHeaderDays();
+            }
+            
             renderTable();
             updateStatistics();
         }
