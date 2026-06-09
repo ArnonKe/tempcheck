@@ -703,7 +703,8 @@
                                     const statusSymbol = cellData.status === "pass" ? "✓" : "✗";
                                     const tempText = cellData.temp !== null ? `${cellData.temp}°C` : "-";
                                     const humText = cellData.hum !== null ? `${cellData.hum}%` : "-";
-                                    row.push(`${statusSymbol} (${tempText} / ${humText})`);
+                                    const recorderText = cellData.recorder ? `\nผู้บันทึก: ${cellData.recorder}` : "";
+                                    row.push(`${statusSymbol} (${tempText} / ${humText})${recorderText}`);
                                 } else {
                                     row.push("");
                                 }
