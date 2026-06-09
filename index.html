@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,46 +13,76 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
         body {
             font-family: 'Sarabun', sans-serif;
         }
+
         /* เทคนิคแบ่งครึ่งตารางแนวทแยงด้วย CSS */
         .diagonal-split {
-            background: linear-gradient(to top right, transparent 49.5%, #cbd5e1 49.5%, #cbd5e1 50.5%, transparent 50.5%);
             position: relative;
+            border: 1px solid #e9eaeb !important;
+            outline: 1px solid #e9eaeb;
+            background: linear-gradient(to top right,
+                    transparent 49.5%,
+                    #cbd5e1 49.5%,
+                    #cbd5e1 50.5%,
+                    transparent 40.5%);
         }
+
         .diagonal-left {
             position: absolute;
             bottom: 4px;
             left: 8px;
         }
+
         .diagonal-right {
             position: absolute;
             top: 4px;
             right: 8px;
         }
+
         /* Custom scrollbar for table container */
         .custom-scrollbar::-webkit-scrollbar {
             height: 10px;
             width: 8px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 5px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        .sticky-border-right {
+            box-shadow: 2px 0 0 0 #cbd5e1;
+
+            thead tr th:nth-child(2) {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: 2px 0 0 0 #cbd5e1;
+            }
+
+            tbody tr td:nth-child(2) {
+                border: 1px solid #e2e8f0 !important;
+                box-shadow: 2px 0 0 0 #e2e8f0;
+            }
+        }
     </style>
 </head>
+
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
     <div class="max-w-7xl mx-auto px-4 py-6">
         <!-- ส่วนหัวข้อและควบคุม -->
-        <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <header
+            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
                 <div class="flex items-center gap-3">
                     <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -60,7 +91,8 @@
                     <div class="flex flex-col">
                         <h1 class="text-2xl font-bold text-slate-900">รายงานการตรวจสอบ อุณหภูมิและความชื้น</h1>
                         <div class="flex items-center gap-2 mt-1">
-                            <select id="select-month" onchange="changePeriod()" class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                            <select id="select-month" onchange="changePeriod()"
+                                class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
                                 <option value="0">มกราคม</option>
                                 <option value="1">กุมภาพันธ์</option>
                                 <option value="2">มีนาคม</option>
@@ -74,7 +106,8 @@
                                 <option value="10">พฤศจิกายน</option>
                                 <option value="11">ธันวาคม</option>
                             </select>
-                            <select id="select-year" onchange="changePeriod()" class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                            <select id="select-year" onchange="changePeriod()"
+                                class="text-sm font-medium text-slate-600 bg-slate-100 border-none rounded-md px-2 py-0.5 focus:ring-2 focus:ring-blue-500 cursor-pointer">
                                 <option value="2568">พ.ศ. 2568</option>
                                 <option value="2569" selected>พ.ศ. 2569</option>
                                 <option value="2570">พ.ศ. 2570</option>
@@ -83,18 +116,21 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
                 <!-- ปุ่มส่งออกเป็น Excel -->
-                <button onclick="exportToExcel()" class="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-semibold transition-all border border-emerald-700 text-sm flex-1 lg:flex-initial shadow-sm shadow-emerald-100">
+                <button onclick="exportToExcel()"
+                    class="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-semibold transition-all border border-emerald-700 text-sm flex-1 lg:flex-initial shadow-sm shadow-emerald-100">
                     <i data-lucide="file-spreadsheet" class="w-4.5 h-4.5"></i> Export เป็น Excel (.xlsx)
                 </button>
                 <!-- ปุ่มส่งออกเป็น JSON เดิม -->
-                <button onclick="exportData()" class="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-semibold transition-all border border-slate-200 text-sm flex-1 lg:flex-initial">
+                <button onclick="exportData()"
+                    class="flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-semibold transition-all border border-slate-200 text-sm flex-1 lg:flex-initial">
                     <i data-lucide="download" class="w-4 h-4"></i> Backup JSON
                 </button>
                 <!-- ปุ่มล้างข้อมูล -->
-                <button onclick="resetDataWithConfirm()" class="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl font-semibold transition-all border border-rose-200 text-sm flex-1 lg:flex-initial">
+                <button onclick="resetDataWithConfirm()"
+                    class="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl font-semibold transition-all border border-rose-200 text-sm flex-1 lg:flex-initial">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> ล้างข้อมูล
                 </button>
             </div>
@@ -143,32 +179,40 @@
         <!-- กล่องตารางข้อมูลหลัก -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <!-- คำแนะนำการใช้งาน -->
-            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div
+                class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div class="flex items-center gap-2 text-sm text-slate-600">
                     <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
-                    <span><strong>คำแนะนำ:</strong> คลิกที่ช่องว่างของแต่ละวันเพื่อบันทึก อุณหภูมิ / ความชื้น และสถานะได้ทันที</span>
+                    <span><strong>คำแนะนำ:</strong> คลิกที่ช่องว่างของแต่ละวันเพื่อบันทึก อุณหภูมิ / ความชื้น
+                        และสถานะได้ทันที</span>
                 </div>
                 <div class="flex items-center gap-4 text-xs text-slate-500">
                     <div class="flex items-center gap-1">
-                        <span class="w-3.5 h-3.5 inline-block bg-emerald-100 border border-emerald-300 rounded"></span> ผ่านเกณฑ์
+                        <span class="w-3.5 h-3.5 inline-block bg-emerald-100 border border-emerald-300 rounded"></span>
+                        ผ่านเกณฑ์
                     </div>
                     <div class="flex items-center gap-1">
-                        <span class="w-3.5 h-3.5 inline-block bg-rose-100 border border-rose-300 rounded"></span> ไม่ผ่านเกณฑ์
+                        <span class="w-3.5 h-3.5 inline-block bg-rose-100 border border-rose-300 rounded"></span>
+                        ไม่ผ่านเกณฑ์
                     </div>
                 </div>
             </div>
 
             <!-- คอนเทนเนอร์ตารางรองรับการเลื่อนแนวนอน -->
             <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left border-collapse table-fixed min-w-[1500px]">
+                <table class="w-full text-left border border-slate-200 table-fixed min-w-[1500px]">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200">
                             <!-- คอลัมน์ที่ 1: สถานที่ -->
-                            <th class="w-48 p-3 text-sm font-semibold text-slate-700 text-center border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
+                            <th
+                                class="w-48 p-3 text-sm font-semibold text-slate-700 text-center border border-slate-200 sticky left-0 bg-slate-50 z-10"
+                                style = "box-shadow: 2px 0 0 0 #cbd5e1;">
                                 Location (สถานที่)
+                                
                             </th>
                             <!-- คอลัมน์ที่ 2: ช่วงเวลา -->
-                            <th class="w-24 p-3 text-sm font-semibold text-slate-700 text-center border-r border-slate-200 sticky left-[192px] bg-slate-50 z-10 diagonal-split h-16">
+                            <th
+                                class="w-24 p-3 text-sm font-semibold text-slate-700 text-center border-r border-slate-200 sticky left-[192px] bg-slate-50 z-10 diagonal-split h-16">
                                 <span class="diagonal-left font-medium text-xs text-slate-500">รอบตรวจ</span>
                                 <span class="diagonal-right font-medium text-xs text-slate-500">วันที่</span>
                             </th>
@@ -184,7 +228,7 @@
                                     const monthSelect = document.getElementById('select-month');
                                     const yearSelect = document.getElementById('select-year');
                                     const monthIndex = parseInt(monthSelect.value);
-                                    
+
                                     const monthShortNames = ["มก.", "กพ.", "มีค.", "เม.ย.", "พค.", "มิย.", "กค.", "สค.", "กย.", "ตค.", "พย.", "ธค."];
                                     const monthName = monthShortNames[monthIndex];
                                     const daysInMonth = new Date(2000 + parseInt(yearSelect.value) - 543, monthIndex + 1, 0).getDate();
@@ -206,24 +250,16 @@
                     <tbody id="table-body">
                         <!-- แถวข้อมูลจะถูกสร้างแบบ Dynamic ด้วย JavaScript ตรงนี้ -->
                     </tbody>
-                    <tfoot class="bg-slate-50 border-t border-slate-200">
-                        <tr>
-                            <td colspan="2" class="p-4 text-sm font-semibold text-slate-600 text-right border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
-                                ผู้บันทึกข้อมูล:
-                            </td>
-                            <td colspan="31" class="p-4 text-sm text-slate-800 font-medium" id="footer-recorder">
-                                -
-                            </td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
 
     <!-- หน้าต่างบันทึกข้อมูลแบบลอยตัว (Modal/Dialog Popup) -->
-    <div id="record-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-[scaleUp_0.2s_ease-out]">
+    <div id="record-modal"
+        class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-[scaleUp_0.2s_ease-out]">
             <!-- หัวข้อ Modal -->
             <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
                 <div>
@@ -233,7 +269,8 @@
                     </h3>
                     <p id="modal-subtitle" class="text-xs text-slate-400 mt-1">สถานที่: - | วันที่: -</p>
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800">
+                <button onclick="closeModal()"
+                    class="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800">
                     <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
@@ -244,12 +281,14 @@
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">สถานะการตรวจสอบ</label>
                     <div class="grid grid-cols-2 gap-3">
-                        <label id="btn-status-pass" class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
+                        <label id="btn-status-pass"
+                            class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
                             <input type="radio" name="check_status" id="status-pass" value="pass" class="sr-only">
                             <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500"></i>
                             <span class="text-sm font-semibold text-slate-700">ผ่านเกณฑ์</span>
                         </label>
-                        <label id="btn-status-fail" class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
+                        <label id="btn-status-fail"
+                            class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all hover:bg-slate-50">
                             <input type="radio" name="check_status" id="status-fail" value="fail" class="sr-only">
                             <i data-lucide="x-circle" class="w-5 h-5 text-rose-500"></i>
                             <span class="text-sm font-semibold text-slate-700">ไม่ผ่านเกณฑ์</span>
@@ -260,28 +299,34 @@
                 <!-- ป้อนข้อมูลตัวเลข -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="input-temp" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <label for="input-temp"
+                            class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
                             <i data-lucide="thermometer" class="w-4 h-4 text-amber-500"></i>
                             อุณหภูมิ (°C)
                         </label>
-                        <input type="number" id="input-temp" step="0.1" placeholder="เช่น 25.4" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
+                        <input type="number" id="input-temp" step="0.1" placeholder="เช่น 25.4"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
                     </div>
                     <div>
-                        <label for="input-hum" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <label for="input-hum"
+                            class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
                             <i data-lucide="droplet" class="w-4 h-4 text-blue-500"></i>
                             ความชื้น (%RH)
                         </label>
-                        <input type="number" id="input-hum" step="0.1" placeholder="เช่น 60" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
+                        <input type="number" id="input-hum" step="0.1" placeholder="เช่น 60"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
                     </div>
                 </div>
 
                 <!-- ผู้บันทึกข้อมูล -->
                 <div class="mt-4">
-                    <label for="input-recorder" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                    <label for="input-recorder"
+                        class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <i data-lucide="user" class="w-4 h-4 text-slate-500"></i>
                         ผู้บันทึกข้อมูล
                     </label>
-                    <input type="text" id="input-recorder" placeholder="ระบุชื่อผู้บันทึก" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
+                    <input type="text" id="input-recorder" placeholder="ระบุชื่อผู้บันทึก"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
                 </div>
 
                 <div class="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -291,14 +336,17 @@
 
             <!-- ส่วนล่างควบคุมปุ่มบันทึก -->
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-                <button onclick="clearCellRecord()" class="px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200">
+                <button onclick="clearCellRecord()"
+                    class="px-4 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200">
                     ล้างช่องนี้
                 </button>
                 <div class="flex-1 flex gap-3 justify-end">
-                    <button onclick="closeModal()" class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors">
+                    <button onclick="closeModal()"
+                        class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors">
                         ยกเลิก
                     </button>
-                    <button onclick="saveCellRecord()" class="px-6 py-2.5 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
+                    <button onclick="saveCellRecord()"
+                        class="px-6 py-2.5 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
                         บันทึกข้อมูล
                     </button>
                 </div>
@@ -309,8 +357,15 @@
     <!-- โกลบอลสไตล์สำหรับการแอนิเมชันตอนเปิด Modal -->
     <style>
         @keyframes scaleUp {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 
@@ -343,12 +398,12 @@
         function changePeriod() {
             currentPeriod.month = parseInt(document.getElementById("select-month").value);
             currentPeriod.year = document.getElementById("select-year").value;
-            
+
             // อัปเดตหัวตารางวันที่ให้ตรงกับเดือนที่เลือก
             if (typeof renderHeaderDays === 'function') {
                 renderHeaderDays();
             }
-            
+
             renderTable();
             updateStatistics();
         }
@@ -394,21 +449,20 @@
 
             // วนรอบเพื่อสร้างบรรทัด (Locations)
             locations.forEach((loc) => {
+                // 1. สร้างแถวสำหรับรอบตรวจ (เช้า/บ่าย)
                 shifts.forEach((shift, shiftIndex) => {
                     const row = document.createElement("tr");
                     row.className = "border-b border-slate-200 hover:bg-slate-50/50 transition-colors";
 
-                    // สังเกตลักษณะการยุบเซลล์ (Rowspan) สำหรับ Location
                     let locCellHtml = "";
                     if (shiftIndex === 0) {
                         locCellHtml = `
-                            <td class="p-3 font-semibold text-slate-800 border-r border-slate-200 text-center text-sm sticky left-0 bg-white z-10" rowspan="2">
+                            <td class="p-3 font-semibold text-slate-800 border-r border-slate-200 text-center text-sm sticky left-0 bg-white z-10" rowspan="3">
                                 ${loc.name}
                             </td>
                         `;
                     }
 
-                    // รอบเช้า/บ่าย
                     const shiftCellHtml = `
                         <td class="p-3 text-slate-600 border-r border-slate-200 text-center text-xs font-medium bg-slate-50 sticky left-[192px] z-10">
                             ${shift.name}
@@ -417,11 +471,10 @@
 
                     row.innerHTML = locCellHtml + shiftCellHtml;
 
-                    // วนลูปเพื่อสร้างช่องข้อมูลของแต่ละวัน (1 - daysInMonth)
                     for (let day = 1; day <= daysInMonth; day++) {
                         const cellKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_${shift.id}_${day}`;
                         const cellData = records[cellKey];
-                        
+
                         if (cellData && cellData.recorder) {
                             recordersInMonth.add(cellData.recorder);
                         }
@@ -432,55 +485,67 @@
                         if (cellData) {
                             const isPass = cellData.status === "pass";
                             bgClass = isPass ? "bg-emerald-50/60 hover:bg-emerald-100/80" : "bg-rose-50/60 hover:bg-rose-100/80";
-                            
-                            // ออกแบบการแสดงผลข้อมูลแบบกะทัดรัด (Compact Single Cell Output)
-                            const iconHtml = isPass 
+                            const iconHtml = isPass
                                 ? `<span class="inline-flex items-center justify-center bg-emerald-500 text-white rounded-md p-0.5 text-[10px] w-4 h-4 font-bold">✓</span>`
                                 : `<span class="inline-flex items-center justify-center bg-rose-500 text-white rounded-md p-0.5 text-[10px] w-4 h-4 font-bold">✗</span>`;
-                            
                             const tempText = cellData.temp ? `${cellData.temp}°` : "-";
                             const humText = cellData.hum ? `${cellData.hum}%` : "-";
 
                             cellContent = `
                                 <div class="flex flex-col items-center justify-center gap-1 py-1 px-0.5 select-none">
-                                    <div class="flex items-center justify-center">
-                                        ${iconHtml}
-                                    </div>
-                                    <div class="text-[10px] font-bold text-slate-700 leading-none">
-                                        ${tempText} / ${humText}
-                                    </div>
+                                    <div class="flex items-center justify-center">${iconHtml}</div>
+                                    <div class="text-[10px] font-bold text-slate-700 leading-none">${tempText} / ${humText}</div>
                                 </div>
                             `;
                         } else {
-                            // เซลล์ว่าง (พร้อมติ๊กถูกเป็น Checkbox เปล่าเหมือนในชีท)
-                            cellContent = `
-                                <div class="flex items-center justify-center py-2">
-                                    <div class="w-4 h-4 rounded border border-slate-300 bg-white flex items-center justify-center group-hover:border-blue-400 transition-colors"></div>
-                                </div>
-                            `;
+                            cellContent = `<div class="flex items-center justify-center py-2"><div class="w-4 h-4 rounded border border-slate-300 bg-white flex items-center justify-center group-hover:border-blue-400 transition-colors"></div></div>`;
                         }
 
-                        // เพิ่ม Cell เข้าไปในแถว
                         const cellTd = document.createElement("td");
                         cellTd.className = `p-1 border-r border-slate-200 text-center cursor-pointer transition-all ${bgClass}`;
                         cellTd.onclick = () => openRecordModal(loc.id, loc.name, shift.id, shift.name, day);
                         cellTd.innerHTML = cellContent;
                         row.appendChild(cellTd);
                     }
-
                     tbody.appendChild(row);
                 });
+
+                // 2. สร้างแถวสรุปผู้บันทึก (Recorder Summary Row) ต่อท้ายแต่ละสถานที่
+                const summaryRow = document.createElement("tr");
+                summaryRow.className = "border-b border-slate-200 bg-slate-100/50";
+
+                const summaryLabelCell = `
+                    <td class="p-3 text-slate-500 border-r border-slate-200 text-center text-xs italic font-medium bg-slate-100 sticky left-[192px] z-10">
+                        ผู้บันทึก
+                    </td>
+                `;
+                summaryRow.innerHTML = summaryLabelCell;
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const morningKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_morning_${day}`;
+                    const afternoonKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_afternoon_${day}`;
+
+                    const morningRec = records[morningKey]?.recorder;
+                    const afternoonRec = records[afternoonKey]?.recorder;
+
+                    let recorderText = "";
+                    if (morningRec && afternoonRec) {
+                        recorderText = morningRec === afternoonRec ? morningRec : `${morningRec}, ${afternoonRec}`;
+                    } else if (morningRec || afternoonRec) {
+                        recorderText = morningRec || afternoonRec;
+                    } else {
+                        recorderText = "-";
+                    }
+
+                    const recTd = document.createElement("td");
+                    recTd.className = "p-1 border-r border-slate-200 text-center text-[9px] text-slate-500 font-medium bg-slate-100/50";
+                    recTd.innerText = recorderText;
+                    summaryRow.appendChild(recTd);
+                }
+                tbody.appendChild(summaryRow);
             });
 
-            // แสดงรายชื่อผู้บันทึกข้อมูลทั้งหมดในเดือนนี้ที่ท้ายตาราง
-            const recorderFooter = document.getElementById("footer-recorder");
-            if (recorderFooter) {
-                recorderFooter.innerText = recordersInMonth.size > 0 
-                    ? Array.from(recordersInMonth).join(", ") 
-                    : "-";
-            }
-
-            // อัปเดต Lucide Icons หลังจากเรนเดอร์ตารางเสร็จ
+            updateRecorderDisplay(recordersInMonth);
             lucide.createIcons();
         }
 
@@ -519,7 +584,7 @@
 
             // ตรวจสอบและดึงข้อมูลเดิมมาแสดงผล (ถ้ามี)
             const currentData = records[activeCellKey];
-            
+
             // รีเซ็ตการตกแต่งสถานะใน Modal
             document.getElementById("status-pass").checked = false;
             document.getElementById("status-fail").checked = false;
@@ -624,9 +689,9 @@
             let totalHum = 0;
             let humCount = 0;
             let totalPass = 0;
-            
+
             // กรองเอาเฉพาะข้อมูลของเดือนและปีที่เลือกปัจจุบัน
-            const currentKeys = Object.keys(records).filter(key => 
+            const currentKeys = Object.keys(records).filter(key =>
                 key.startsWith(`${currentPeriod.year}_${currentPeriod.month}_`)
             );
             const totalRecords = currentKeys.length;
@@ -714,7 +779,7 @@
                     });
 
                     const ws = XLSX.utils.aoa_to_sheet(data);
-                    
+
                     // จัดลำดับความกว้างคอลัมน์
                     const colWidths = [{ wch: 25 }, { wch: 15 }];
                     for (let i = 1; i <= daysInMonth; i++) {
@@ -744,7 +809,7 @@
         // ฟังก์ชันส่งออกไฟล์ JSON เพื่อสำรองข้อมูลเดิม
         function exportData() {
             const year = currentPeriod.year;
-            
+
             // กรองเอาเฉพาะข้อมูลของปีที่เลือกปัจจุบัน (รวมทุกเดือน)
             const yearlyRecords = {};
             Object.keys(records).forEach(key => {
@@ -767,7 +832,7 @@
         function showToast(message, type = "info") {
             const toast = document.createElement("div");
             toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-lg border text-sm font-semibold transition-all transform translate-y-10 opacity-0 z-50 flex items-center gap-2 max-w-sm`;
-            
+
             let icon = `<i data-lucide="info" class="w-5 h-5 text-blue-500"></i>`;
             if (type === "success") {
                 toast.classList.add("bg-emerald-50", "border-emerald-200", "text-emerald-800");
@@ -799,7 +864,7 @@
         }
 
         // การเริ่มต้นแอปพลิเคชัน
-        window.onload = function() {
+        window.onload = function () {
             loadSavedData();
             renderTable();
             updateStatistics();
@@ -807,4 +872,5 @@
         };
     </script>
 </body>
+
 </html>
