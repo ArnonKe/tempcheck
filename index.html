@@ -672,61 +672,67 @@
             }
         }
 
-        // ฟังก์ชันสำหรับส่งออกรายงานเป็นไฟล์ Excel (.xlsx) อย่างเป็นระบบ
+        // ฟังก์ชันสำหรับส่งออกรายงานเป็นไฟล์ Excel (.xlsx) แบบรวมทั้งปี (12 เดือน)
         function exportToExcel() {
             try {
                 const wb = XLSX.utils.book_new();
-                const data = [];
+                const year = currentPeriod.year;
+                const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-                const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
-                const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
+                // วนลูปสร้าง Sheet สำหรับแต่ละเดือน (0-11)
+                for (let m = 0; m < 12; m++) {
+                    const data = [];
+                    const monthName = monthNames[m];
+                    const daysInMonth = new Date(2000 + parseInt(year) - 543, m + 1, 0).getDate();
 
-                // แถวที่ 1: หัวตาราง
-                const headerRow = ["สถานที่ (Location)", "รอบตรวจสอบ"];
-                for (let day = 1; day <= daysInMonth; day++) {
-                    headerRow.push(`วันที่ ${day}`);
-                }
-                data.push(headerRow);
+                    // แถวที่ 1: หัวตาราง
+                    const headerRow = ["สถานที่ (Location)", "รอบตรวจสอบ"];
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        headerRow.push(`วันที่ ${day}`);
+                    }
+                    data.push(headerRow);
 
-                // แถวข้อมูล
-                locations.forEach(loc => {
-                    shifts.forEach(shift => {
-                        const row = [loc.name, shift.name];
-                        for (let day = 1; day <= daysInMonth; day++) {
-                            const cellKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_${shift.id}_${day}`;
-                            const cellData = records[cellKey];
-                            if (cellData) {
-                                const statusSymbol = cellData.status === "pass" ? "✓" : "✗";
-                                const tempText = cellData.temp !== null ? `${cellData.temp}°C` : "-";
-                                const humText = cellData.hum !== null ? `${cellData.hum}%` : "-";
-                                row.push(`${statusSymbol} (${tempText} / ${humText})`);
-                            } else {
-                                row.push("");
+                    // แถวข้อมูล
+                    locations.forEach(loc => {
+                        shifts.forEach(shift => {
+                            const row = [loc.name, shift.name];
+                            for (let day = 1; day <= daysInMonth; day++) {
+                                const cellKey = `${year}_${m}_${loc.id}_${shift.id}_${day}`;
+                                const cellData = records[cellKey];
+                                if (cellData) {
+                                    const statusSymbol = cellData.status === "pass" ? "✓" : "✗";
+                                    const tempText = cellData.temp !== null ? `${cellData.temp}°C` : "-";
+                                    const humText = cellData.hum !== null ? `${cellData.hum}%` : "-";
+                                    row.push(`${statusSymbol} (${tempText} / ${humText})`);
+                                } else {
+                                    row.push("");
+                                }
                             }
-                        }
-                        data.push(row);
+                            data.push(row);
+                        });
                     });
-                });
 
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                
-                // จัดลำดับความกว้างคอลัมน์
-                const colWidths = [{ wch: 25 }, { wch: 15 }];
-                for (let i = 1; i <= daysInMonth; i++) {
-                    colWidths.push({ wch: 18 });
+                    const ws = XLSX.utils.aoa_to_sheet(data);
+                    
+                    // จัดลำดับความกว้างคอลัมน์
+                    const colWidths = [{ wch: 25 }, { wch: 15 }];
+                    for (let i = 1; i <= daysInMonth; i++) {
+                        colWidths.push({ wch: 18 });
+                    }
+                    ws['!cols'] = colWidths;
+
+                    // ผสานเซลล์สถานที่
+                    ws['!merges'] = [
+                        { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+                        { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } },
+                        { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }
+                    ];
+
+                    XLSX.utils.book_append_sheet(wb, ws, monthName);
                 }
-                ws['!cols'] = colWidths;
 
-                // ผสานเซลล์สถานที่
-                ws['!merges'] = [
-                    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
-                    { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } },
-                    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }
-                ];
-
-                XLSX.utils.book_append_sheet(wb, ws, `รายงาน_${monthName}_${currentPeriod.year}`);
-                XLSX.writeFile(wb, `รายงาน_อุณหภูมิ_ความชื้น_${monthName}_${currentPeriod.year}.xlsx`);
-                showToast("ดาวน์โหลดไฟล์ Excel สำเร็จเรียบร้อยแล้ว!", "success");
+                XLSX.writeFile(wb, `รายงาน_อุณหภูมิ_ความชื้น_รวมทั้งปี_${year}.xlsx`);
+                showToast("ดาวน์โหลดไฟล์ Excel รวมทั้งปีสำเร็จเรียบร้อยแล้ว!", "success");
 
             } catch (error) {
                 console.error("Error exporting excel: ", error);
@@ -736,24 +742,24 @@
 
         // ฟังก์ชันส่งออกไฟล์ JSON เพื่อสำรองข้อมูลเดิม
         function exportData() {
-            const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
+            const year = currentPeriod.year;
             
-            // กรองเอาเฉพาะข้อมูลของเดือนและปีที่เลือกปัจจุบัน
-            const filteredRecords = {};
+            // กรองเอาเฉพาะข้อมูลของปีที่เลือกปัจจุบัน (รวมทุกเดือน)
+            const yearlyRecords = {};
             Object.keys(records).forEach(key => {
-                if (key.startsWith(`${currentPeriod.year}_${currentPeriod.month}_`)) {
-                    filteredRecords[key] = records[key];
+                if (key.startsWith(`${year}_`)) {
+                    yearlyRecords[key] = records[key];
                 }
             });
 
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredRecords, null, 2));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(yearlyRecords, null, 2));
             const downloadAnchor = document.createElement("a");
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_${monthName}_${currentPeriod.year}.json`);
+            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_รวมทั้งปี_${year}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
-            showToast("ส่งออกข้อมูล JSON สำเร็จ", "success");
+            showToast("ส่งออกข้อมูล JSON รวมทั้งปีสำเร็จ", "success");
         }
 
         // แสดงแจ้งเตือนด่วน (Toast Message) โดยไม่พึ่งพาระบบ Alert
