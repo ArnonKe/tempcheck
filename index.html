@@ -206,13 +206,19 @@
                     <tbody id="table-body">
                         <!-- แถวข้อมูลจะถูกสร้างแบบ Dynamic ด้วย JavaScript ตรงนี้ -->
                     </tbody>
+                    <tfoot class="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                            <td colspan="2" class="p-4 text-sm font-semibold text-slate-600 text-right border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
+                                ผู้บันทึกข้อมูล:
+                            </td>
+                            <td colspan="31" class="p-4 text-sm text-slate-800 font-medium" id="footer-recorder">
+                                -
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
-
-        <footer class="mt-8 text-center text-xs text-slate-400 pb-12">
-            ออกแบบจำลองระบบรายงานตารางตรวจสอบอุณหภูมิและความชื้นแบบ Single-Cell Input | รองรับการดาวน์โหลดไฟล์ Excel .xlsx และระบบบันทึกข้อมูลออฟไลน์
-        </footer>
     </div>
 
     <!-- หน้าต่างบันทึกข้อมูลแบบลอยตัว (Modal/Dialog Popup) -->
@@ -267,6 +273,15 @@
                         </label>
                         <input type="number" id="input-hum" step="0.1" placeholder="เช่น 60" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
                     </div>
+                </div>
+
+                <!-- ผู้บันทึกข้อมูล -->
+                <div class="mt-4">
+                    <label for="input-recorder" class="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-4 h-4 text-slate-500"></i>
+                        ผู้บันทึกข้อมูล
+                    </label>
+                    <input type="text" id="input-recorder" placeholder="ระบุชื่อผู้บันทึก" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 font-medium">
                 </div>
 
                 <div class="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -374,6 +389,9 @@
             // คำนวณจำนวนวันในเดือนที่เลือก
             const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
 
+            // เก็บรายชื่อผู้บันทึกในเดือนนี้เพื่อแสดงที่ท้ายตาราง
+            const recordersInMonth = new Set();
+
             // วนรอบเพื่อสร้างบรรทัด (Locations)
             locations.forEach((loc) => {
                 shifts.forEach((shift, shiftIndex) => {
@@ -404,6 +422,10 @@
                         const cellKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_${shift.id}_${day}`;
                         const cellData = records[cellKey];
                         
+                        if (cellData && cellData.recorder) {
+                            recordersInMonth.add(cellData.recorder);
+                        }
+
                         let cellContent = "";
                         let bgClass = "bg-white hover:bg-slate-100";
 
@@ -450,7 +472,41 @@
                 });
             });
 
+            // แสดงรายชื่อผู้บันทึกข้อมูลทั้งหมดในเดือนนี้ที่ท้ายตาราง
+            const recorderFooter = document.getElementById("footer-recorder");
+            if (recorderFooter) {
+                recorderFooter.innerText = recordersInMonth.size > 0 
+                    ? Array.from(recordersInMonth).join(", ") 
+                    : "-";
+            }
+
             // อัปเดต Lucide Icons หลังจากเรนเดอร์ตารางเสร็จ
+            lucide.createIcons();
+        }
+
+        function updateRecorderDisplay(recorders) {
+            let displayDiv = document.getElementById("recorder-display");
+            if (!displayDiv) {
+                // สร้างส่วนแสดงผลผู้บันทึกถ้ายังไม่มี
+                const tableContainer = document.querySelector(".bg-white.rounded-2xl.shadow-sm.border.border-slate-100.overflow-hidden");
+                const footerDiv = document.createElement("div");
+                footerDiv.id = "recorder-display";
+                footerDiv.className = "px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center";
+                tableContainer.appendChild(footerDiv);
+                displayDiv = footerDiv;
+            }
+
+            const recorderList = Array.from(recorders).join(", ");
+            displayDiv.innerHTML = `
+                <div class="flex items-center gap-2 text-sm text-slate-600">
+                    <i data-lucide="user-check" class="w-4 h-4 text-blue-500"></i>
+                    <span class="font-medium">ผู้บันทึกข้อมูลประจำเดือนนี้:</span>
+                    <span class="text-slate-800">${recorderList || "-"}</span>
+                </div>
+                <div class="text-xs text-slate-400">
+                    บันทึกข้อมูลล่าสุด: ${new Date().toLocaleDateString('th-TH')}
+                </div>
+            `;
             lucide.createIcons();
         }
 
@@ -469,6 +525,7 @@
             document.getElementById("status-fail").checked = false;
             document.getElementById("input-temp").value = "";
             document.getElementById("input-hum").value = "";
+            document.getElementById("input-recorder").value = "";
 
             if (currentData) {
                 if (currentData.status === "pass") {
@@ -478,6 +535,7 @@
                 }
                 document.getElementById("input-temp").value = currentData.temp || "";
                 document.getElementById("input-hum").value = currentData.hum || "";
+                document.getElementById("input-recorder").value = currentData.recorder || "";
             } else {
                 // ค่าเริ่มต้นเมื่อกดเข้าไปในช่องว่างให้เลือก "ผ่านเกณฑ์" ไว้ก่อน
                 document.getElementById("status-pass").checked = true;
@@ -527,12 +585,14 @@
             const isPass = document.getElementById("status-pass").checked;
             const tempVal = document.getElementById("input-temp").value;
             const humVal = document.getElementById("input-hum").value;
+            const recorderVal = document.getElementById("input-recorder").value;
 
             // ตรวจสอบความถูกต้องของข้อมูล (สามารถบันทึกแค่ติ๊กผ่าน/ไม่ผ่านอย่างเดียวได้)
             records[activeCellKey] = {
                 status: isPass ? "pass" : "fail",
                 temp: tempVal !== "" ? parseFloat(tempVal) : null,
-                hum: humVal !== "" ? parseFloat(humVal) : null
+                hum: humVal !== "" ? parseFloat(humVal) : null,
+                recorder: recorderVal || "ไม่ระบุ"
             };
 
             // อัปเดตตารางและเก็บสถิติลงฐานข้อมูลเครื่อง
@@ -564,10 +624,14 @@
             let totalHum = 0;
             let humCount = 0;
             let totalPass = 0;
-            const keys = Object.keys(records);
-            const totalRecords = keys.length;
+            
+            // กรองเอาเฉพาะข้อมูลของเดือนและปีที่เลือกปัจจุบัน
+            const currentKeys = Object.keys(records).filter(key => 
+                key.startsWith(`${currentPeriod.year}_${currentPeriod.month}_`)
+            );
+            const totalRecords = currentKeys.length;
 
-            keys.forEach(key => {
+            currentKeys.forEach(key => {
                 const item = records[key];
                 if (item.temp !== null && item.temp !== undefined) {
                     totalTemp += item.temp;
@@ -611,25 +675,25 @@
         // ฟังก์ชันสำหรับส่งออกรายงานเป็นไฟล์ Excel (.xlsx) อย่างเป็นระบบ
         function exportToExcel() {
             try {
-                // สร้าง Workbook เปล่าขึ้นมา
                 const wb = XLSX.utils.book_new();
-
-                // สร้างโครงสร้างตารางข้อมูลเป็นแถว (Array of Arrays)
                 const data = [];
+
+                const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
+                const daysInMonth = new Date(2000 + parseInt(document.getElementById('select-year').value) - 543, currentPeriod.month + 1, 0).getDate();
 
                 // แถวที่ 1: หัวตาราง
                 const headerRow = ["สถานที่ (Location)", "รอบตรวจสอบ"];
-                for (let day = 1; day <= 30; day++) {
+                for (let day = 1; day <= daysInMonth; day++) {
                     headerRow.push(`วันที่ ${day}`);
                 }
                 data.push(headerRow);
 
-                // แถวข้อมูล: นำข้อมูลจากตัวแปร records มาแปลงเป็นฟอร์แมตข้อความสวยงามสำหรับ Excel
+                // แถวข้อมูล
                 locations.forEach(loc => {
                     shifts.forEach(shift => {
                         const row = [loc.name, shift.name];
-                        for (let day = 1; day <= 30; day++) {
-                            const cellKey = `${loc.id}_${shift.id}_${day}`;
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const cellKey = `${currentPeriod.year}_${currentPeriod.month}_${loc.id}_${shift.id}_${day}`;
                             const cellData = records[cellKey];
                             if (cellData) {
                                 const statusSymbol = cellData.status === "pass" ? "✓" : "✗";
@@ -637,37 +701,31 @@
                                 const humText = cellData.hum !== null ? `${cellData.hum}%` : "-";
                                 row.push(`${statusSymbol} (${tempText} / ${humText})`);
                             } else {
-                                row.push(""); // เซลล์ว่างที่ยังไม่ได้บันทึกผล
+                                row.push("");
                             }
                         }
                         data.push(row);
                     });
                 });
 
-                // แปลงแถวข้อมูลเป็น Worksheet ของ Excel
                 const ws = XLSX.utils.aoa_to_sheet(data);
-
-                // จัดลำดับความกว้างคอลัมน์ (Column Widths)
-                const colWidths = [
-                    { wch: 25 }, // คอลัมน์สถานที่
-                    { wch: 15 }  // คอลัมน์รอบตรวจ
-                ];
-                for (let i = 1; i <= 30; i++) {
-                    colWidths.push({ wch: 18 }); // คอลัมน์วันที่ 1-30 ให้มีความกว้างที่พอดีสำหรับ "✓ (25.4°C / 60%)"
+                
+                // จัดลำดับความกว้างคอลัมน์
+                const colWidths = [{ wch: 25 }, { wch: 15 }];
+                for (let i = 1; i <= daysInMonth; i++) {
+                    colWidths.push({ wch: 18 });
                 }
                 ws['!cols'] = colWidths;
 
-                // การผสานเซลล์ (Merge Cells) ในคอลัมน์ "สถานที่" เพื่อให้ดูเหมือนในต้นฉบับ
-                // ดัชนีเริ่มต้นด้วย 0: แถวหัวตารางคือแถวที่ 0
-                // แถวที่ 1 กับ 2 (สำนักงาน SUEN), แถวที่ 3 กับ 4 (หน้าร้าน We make), แถวที่ 5 กับ 6 (สำนักงาน SC Precast)
+                // ผสานเซลล์สถานที่
                 ws['!merges'] = [
-                    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, // ผสานช่องสถานที่ SUEN
-                    { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } }, // ผสานช่องสถานที่ We make
-                    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }  // ผสานช่องสถานที่ SC Precast
+                    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+                    { s: { r: 3, c: 0 }, e: { r: 4, c: 0 } },
+                    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }
                 ];
 
-                // บันทึก Sheet เข้าสู่ Workbook
-                XLSX.utils.book_append_sheet(wb, ws, `รายงานอุณหภูมิ_ความชื้น_${document.getElementById('select-month').options[document.getElementById('select-month').value].text}_${document.getElementById('select-year').value}.xlsx`);
+                XLSX.utils.book_append_sheet(wb, ws, `รายงาน_${monthName}_${currentPeriod.year}`);
+                XLSX.writeFile(wb, `รายงาน_อุณหภูมิ_ความชื้น_${monthName}_${currentPeriod.year}.xlsx`);
                 showToast("ดาวน์โหลดไฟล์ Excel สำเร็จเรียบร้อยแล้ว!", "success");
 
             } catch (error) {
@@ -678,10 +736,20 @@
 
         // ฟังก์ชันส่งออกไฟล์ JSON เพื่อสำรองข้อมูลเดิม
         function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+            const monthName = document.getElementById('select-month').options[currentPeriod.month].text;
+            
+            // กรองเอาเฉพาะข้อมูลของเดือนและปีที่เลือกปัจจุบัน
+            const filteredRecords = {};
+            Object.keys(records).forEach(key => {
+                if (key.startsWith(`${currentPeriod.year}_${currentPeriod.month}_`)) {
+                    filteredRecords[key] = records[key];
+                }
+            });
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredRecords, null, 2));
             const downloadAnchor = document.createElement("a");
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_${document.getElementById('select-month').options[document.getElementById('select-month').value].text}_${document.getElementById('select-year').value}.json`);
+            downloadAnchor.setAttribute("download", `รายงานอุณหภูมิ_ความชื้น_${monthName}_${currentPeriod.year}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
